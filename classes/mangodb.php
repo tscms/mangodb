@@ -2,12 +2,40 @@
 
 class MangoDB {
 
-	// Database instances
+	/**
+	 * @var  string  default instance name
+	 */
+	public static $default = 'default';
+
+	/**
+	 * @var  array  Database instances
+	 */
 	public static $instances = array();
 
-	public static function instance($name = 'default', array $config = NULL)
+	/**
+	 * Get a singleton MangoDB instance. If configuration is not specified,
+	 * it will be loaded from the MangoDB configuration file using the same
+	 * group as the name.
+	 *
+	 *     // Load the default database
+	 *     $db = MangoDB::instance();
+	 *
+	 *     // Create a custom configured instance
+	 *     $db = MangoDB::instance('custom', $config);
+	 *
+	 * @param   string   instance name
+	 * @param   array    configuration parameters
+	 * @return  Database
+	 */
+	public static function instance($name = NULL, array $config = NULL)
 	{
-		if ( ! isset(self::$instances[$name]))
+		if ($name === NULL)
+		{
+			// Use the default instance name
+			$name = MangoDB::$default;
+		}
+
+		if ( ! isset(MangoDB::$instances[$name]))
 		{
 			if ($config === NULL)
 			{
