@@ -57,23 +57,37 @@ class Mango_Array extends Mango_ArrayObject {
 
 				if ( $this->_changed[$key] === TRUE)
 				{
+					$data = array();
+					$path = implode('.', $path);
+
+					if ( $update)
+					{
+						$data = array('$set' => array($path => $value));
+					}
+					else
+					{
+						Arr::set_path($data, $path, $value);
+					}
+
+					$changed = Arr::merge($changed, $data);
+
 					// __set
-					$changed = $update
+					/*$changed = $update
 						? arr::merge($changed, array( '$set' => array( implode('.',$path) => $value)))
-						: arr::merge($changed, arr::path_set($path,$value) );
+						: arr::merge($changed, arr::path_set($path,$value) );*/
 				}
 				else
 				{
 					// __unset
 					if ( $update)
 					{
-						$changed = arr::merge($changed, array( '$unset' => array( implode('.',$path) => TRUE)));
+						$changed = Arr::merge($changed, array( '$unset' => array( implode('.',$path) => TRUE)));
 					}
 				}
 			}
 			elseif ($value instanceof Mango_Interface)
 			{
-				$changed = arr::merge($changed, $value->changed($update, array_merge($prefix,array($key))));
+				$changed = Arr::merge($changed, $value->changed($update, array_merge($prefix,array($key))));
 			}
 		}
 

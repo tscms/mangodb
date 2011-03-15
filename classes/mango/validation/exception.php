@@ -1,6 +1,6 @@
 <?php defined('SYSPATH') or die('No direct script access.');
 
-class Mango_Validate_Exception extends Validate_Exception {
+class Mango_Validation_Exception extends Validation_Exception {
 
 	/**
 	 * @var  string  Name of model
@@ -12,7 +12,7 @@ class Mango_Validate_Exception extends Validate_Exception {
 	 */
 	public $seq;
 
-	public function __construct($model, Validate $array, $message = 'Failed to validate array', array $values = NULL, $code = 0)
+	public function __construct($model, Validation $array, $message = 'Failed to validate array', array $values = NULL, $code = 0)
 	{
 		$this->model = $model;
 

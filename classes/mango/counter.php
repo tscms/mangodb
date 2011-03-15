@@ -67,18 +67,22 @@ class Mango_Counter implements Mango_Interface {
 	 */
 	public function changed($update, array $prefix = array())
 	{
-		if ( $update)
+		$path = implode('.',$prefix);
+		$data = array();
+
+		if ( ! empty($this->_changed))
 		{
-			return ! empty($this->_changed)
-				? array('$inc' => array(implode('.',$prefix) => $this->_changed))
-				: array();
+			if ( $update)
+			{
+				$data['$inc'] = array($path => $this->_changed);
+			}
+			else
+			{
+				Arr::set_path($data, $path, $this->_value);
+			}
 		}
-		else
-		{
-			return ! empty($this->_changed)
-				? arr::path_set($prefix,$this->_value)
-				: array();
-		}
+
+		return $data;
 	}
 
 	public function saved()

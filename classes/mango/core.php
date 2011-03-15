@@ -713,17 +713,31 @@ abstract class Mango_Core implements Mango_Interface {
 
 				if ( $this->_changed[$name] === TRUE)
 				{
+					$data = array();
+					$path = implode('.', $path);
+
+					if ( $update)
+					{
+						$data = array('$set' => array($path => $value));
+					}
+					else
+					{
+						Arr::set_path($data, $path, $value);
+					}
+
+					$changed = Arr::merge($changed, $data);
+
 					// __set
-					$changed = $update
+					/*$changed = $update
 						? arr::merge($changed,array('$set'=>array( implode('.',$path) => $value) ) )
-						: arr::merge($changed, arr::path_set($path,$value) );
+						: arr::merge($changed, arr::path_set($path,$value) );*/
 				}
 				else
 				{
 					// __unset
 					if ( $update)
 					{
-						$changed = arr::merge($changed, array('$unset'=> array( implode('.', $path) => TRUE)));
+						$changed = Arr::merge($changed, array('$unset'=> array( implode('.', $path) => TRUE)));
 					}
 				}
 			}
@@ -732,7 +746,7 @@ abstract class Mango_Core implements Mango_Interface {
 				// check any (embedded) objects/arrays/sets
 				if ( $value instanceof Mango_Interface)
 				{
-					$changed = arr::merge($changed, $value->changed($update,$path));
+					$changed = Arr::merge($changed, $value->changed($update,$path));
 				}
 			}
 		}
@@ -1045,7 +1059,8 @@ abstract class Mango_Core implements Mango_Interface {
 		// Validate local data (if required / available)
 		if ( $subject !== Mango::CHECK_ONLY || count($local))
 		{
-			$array = Validate::factory($local);
+			$array = Validation::factory($local)
+				->bind(':model', $this);
 
 			// Add validation rules
 			$array = $this->_check($array);
@@ -1066,7 +1081,7 @@ abstract class Mango_Core implements Mango_Interface {
 			if ( ! $array->check( $allow_empty ))
 			{
 				// Validation failed
-				throw new Mango_Validate_Exception($this->_model,$array);
+				throw new Mango_Validation_Exception($this->_model,$array);
 			}
 
 			foreach ( $array as $field => $value)
@@ -1101,7 +1116,7 @@ abstract class Mango_Core implements Mango_Interface {
 						{
 							$val[$k] = $model->check($v, $subject, $allow_empty);
 						}
-						catch ( Mango_Validate_Exception $e)
+						catch ( Mango_Validation_Exception $e)
 						{
 							// add sequence number of failed object to exception
 							$e->seq = $k;
@@ -1128,7 +1143,7 @@ abstract class Mango_Core implements Mango_Interface {
 	 * @param   Validate  Validate object
 	 * @return  Validate  Validate object
 	 */
-	protected function _check(Validate $data)
+	protected function _check(Validation $data)
 	{
 		foreach ($this->_fields as $name => $field)
 		{
@@ -1136,7 +1151,7 @@ abstract class Mango_Core implements Mango_Interface {
 			switch ( $field['type'])
 			{
 				case 'enum':
-					$data->rule($name,'in_array',array($field['values']));
+					$data->rule($name,'in_array',array(':value', $field['values']));
 				break;
 				case 'int':
 				case 'float':
@@ -1173,26 +1188,14 @@ abstract class Mango_Core implements Mango_Interface {
 			{
 				if ( isset($field[$rule]))
 				{
-					$data->rule($name,$rule,array($field[$rule]));
+					$data->rule($name,$rule,array(':value', $field[$rule]));
 				}
 			}
 
 			// value has to be unique
 			if ( isset($field['unique']) && ! in_array($field['type'], array('set','has_many')) && $field['unique'] === TRUE)
 			{
-				$data->callback($name,array($this,'_is_unique'));
-			}
-
-			// xss clean of strings
-			if ( $field['type'] === 'string' && isset($field['xss_clean']) && isset($data[$name]))
-			{
-				$data->filter($name,'Validate::xss_clean');
-			}
-
-			// filters contained in field spec
-			if ( isset($field['filters']))
-			{
-				$data->filters($name,$field['filters']);
+				$data->rule($name,array($this,'_is_unique'),array(':validation', $name));
 			}
 
 			// rules contained in field spec
@@ -1207,7 +1210,7 @@ abstract class Mango_Core implements Mango_Interface {
 			}
 		}
 
-		foreach ($this->_relations as $name => &$relation)
+		foreach ( $this->_relations as $name => &$relation)
 		{
 			// belongs to ID field
 			if ( $relation['type'] === 'belongs_to')
@@ -1273,8 +1276,15 @@ abstract class Mango_Core implements Mango_Interface {
 				$value = (bool) $value;
 			break;
 			case 'email':
+				$value = strtolower(trim((string) $value));
+			break;
 			case 'string':
 				$value = trim((string) $value);
+
+				if ( Arr::get($field, 'xss_clean') && ! empty($value))
+				{
+					$value = Security::xss_clean($value);
+				}
 			break;
 			case 'has_one':
 				if ( is_array($value))
@@ -1309,6 +1319,83 @@ abstract class Mango_Core implements Mango_Interface {
 					? $value
 					: NULL;
 			break;
+		}
+
+		// Apply filters
+		$value = $this->run_filters($name, $value);
+
+		return $value;
+	}
+
+	/**
+	 * Filters a value for a specific column
+	 *
+	 * @param  string $field  The column name
+	 * @param  string $value  The value to filter
+	 * @return string
+	 *
+	 * @package    Kohana/ORM
+	 * @author     Kohana Team
+	 * @copyright  (c) 2007-2010 Kohana Team
+	 * @license    http://kohanaframework.org/license
+	 */
+	protected function run_filters($name, $value)
+	{
+		if ( ! isset($this->_fields[$name]['filters']))
+		{
+			return $value;
+		}
+
+		// Bind the field name and model so they can be used in the filter method
+		$_bound = array
+		(
+			':field' => $name,
+			':model' => $this,
+		);
+
+		foreach ($filters as $array)
+		{
+			// Value needs to be bound inside the loop so we are always using the
+			// version that was modified by the filters that already ran
+			$_bound[':value'] = $value;
+
+			// Filters are defined as array($filter, $params)
+			$filter = $array[0];
+			$params = Arr::get($array, 1, array(':value'));
+
+			foreach ($params as $key => $param)
+			{
+				if (is_string($param) AND array_key_exists($param, $_bound))
+				{
+					// Replace with bound value
+					$params[$key] = $_bound[$param];
+				}
+			}
+
+			if (is_array($filter) OR ! is_string($filter))
+			{
+				// This is either a callback as an array or a lambda
+				$value = call_user_func_array($filter, $params);
+			}
+			elseif (strpos($filter, '::') === FALSE)
+			{
+				// Use a function call
+				$function = new ReflectionFunction($filter);
+
+				// Call $function($this[$field], $param, ...) with Reflection
+				$value = $function->invokeArgs($params);
+			}
+			else
+			{
+				// Split the class and method of the rule
+				list($class, $method) = explode('::', $filter, 2);
+
+				// Use a static method call
+				$method = new ReflectionMethod($class, $method);
+
+				// Call $Class::$method($this[$field], $param, ...) with Reflection
+				$value = $method->invokeArgs(NULL, $params);
+			}
 		}
 
 		return $value;
@@ -1521,7 +1608,7 @@ abstract class Mango_Core implements Mango_Interface {
 	 *
 	 * Verifies if field is unique
 	 */
-	public function _is_unique(Validate $array, $field)
+	public function _is_unique(Validation $array, $field)
 	{
 		if ( $this->loaded() AND $this->_object[$field] === $array[$field])
 		{

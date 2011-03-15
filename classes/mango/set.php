@@ -83,9 +83,18 @@ class Mango_Set extends Mango_ArrayObject {
 		if ( $update === FALSE)
 		{
 			// no more changes possible after this
-			return count($elements)
+			$data = array();
+
+			if ( count($elements))
+			{
+				Arr::set_path($data, implode('.',$prefix), $elements);
+			}
+
+			return $data;
+
+			/*return count($elements)
 				? arr::path_set($prefix,$elements)
-				: array();
+				: array();*/
 		}
 
 		// First, get all changes made to the elements of this set directly
@@ -99,13 +108,13 @@ class Mango_Set extends Mango_ArrayObject {
 			case 'set':
 				foreach ( $this->_changed as $index => $set_index)
 				{
-					$changes_local = arr::merge($changes_local, array('$set' => array( implode('.',$prefix) . '.' . $set_index => $elements[$index])));
+					$changes_local = Arr::merge($changes_local, array('$set' => array( implode('.',$prefix) . '.' . $set_index => $elements[$index])));
 				}
 			break;
 			case 'unset':
 				foreach ( $this->_changed as $unset_index)
 				{
-					$changes_local = arr::merge($changes_local, array('$unset' => array( implode('.',$prefix) . '.' . $unset_index => TRUE)));
+					$changes_local = Arr::merge($changes_local, array('$unset' => array( implode('.',$prefix) . '.' . $unset_index => TRUE)));
 				}
 			break;
 			case 'addToSet':
@@ -141,7 +150,7 @@ class Mango_Set extends Mango_ArrayObject {
 			{
 				if ( $value instanceof Mango_Interface)
 				{
-					$changes_children = arr::merge($changes_children, $value->changed($update, array_merge($prefix,array($index))));
+					$changes_children = Arr::merge($changes_children, $value->changed($update, array_merge($prefix,array($index))));
 				}
 			}
 		}
@@ -155,7 +164,7 @@ class Mango_Set extends Mango_ArrayObject {
 		}
 
 		// Return all changes
-		return arr::merge( $changes_local, $changes_children);
+		return Arr::merge( $changes_local, $changes_children);
 	}
 
 	/*
