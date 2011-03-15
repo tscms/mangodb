@@ -1611,12 +1611,7 @@ abstract class Mango_Core implements Mango_Interface {
 			return TRUE;
 		}
 
-		$found = $this->db()->find_one( $this->_collection, array($field => $array[$field]), array('_id'=>TRUE));
-
-		if ( $found !== NULL)
-		{
-			$array->error($field,'is_unique');
-		}
+		return $this->db()->find_one( $this->_collection, array($field => $array[$field]), array('_id'=>TRUE)) === NULL;
 	}
 
 	/*
