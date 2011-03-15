@@ -1203,11 +1203,6 @@ abstract class Mango_Core implements Mango_Interface {
 			{
 				$data->rules($name,$field['rules']);
 			}
-
-			if ( isset($field['callbacks']))
-			{
-				$data->callbacks($name,$field['callbacks']);
-			}
 		}
 
 		foreach ( $this->_relations as $name => &$relation)
@@ -1604,7 +1599,7 @@ abstract class Mango_Core implements Mango_Interface {
 	}
 
 	/**
-	 * Validation callback
+	 * Validation rule
 	 *
 	 * Verifies if field is unique
 	 */
