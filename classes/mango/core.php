@@ -567,7 +567,7 @@ abstract class Mango_Core implements Mango_Interface {
 				switch ( $relation['type'])
 				{
 					case 'belongs_to':
-						$this->_fields[$name . '_id'] = array('type'=>'MongoId');
+						$this->_fields[$name . '_id'] = array('type'=>'MongoId', 'required' => TRUE);
 					break;
 					case 'has_and_belongs_to_many':
 						$this->_fields[$name . '_ids'] = array('type'=>'set', 'unique' => TRUE);
@@ -1019,57 +1019,48 @@ abstract class Mango_Core implements Mango_Interface {
 	}
 
 	/**
-	 * Check the given data is valid. Recursively checks embedded objects as well
+	 * Validates data. If no data supplied, uses current data in document. Checks embedded_documents as well.
 	 *
-	 * @throws  Validate_Exception  when an error is found
-	 * @param   array    data to check, defaults to current document data (including embedded documents)
+	 * @throws  Validation_Exception  when an error is found
 	 * @param   subject  specify what part of $data should be subjected to validation, Mango::CHECK_FULL, Mango::CHECK_LOCAL, Mango::CHECK_ONLY
-	 * @param   boolean  validate empty arrays
-	 * @return  array    validated $data
+	 * @param   array    data to check, defaults to current document data (including embedded documents)
+	 * @return  Mango    $this
 	 */
-	public function check(array $data = NULL, $subject = 0, $allow_empty = FALSE)
+	public function check(array $data = NULL, $subject = 0)
 	{
-		if ( $data === NULL )
+		if ( $data !== NULL)
 		{
-			$data = $this->as_array( FALSE );
+			// create a new object with data, and validate
+			Mango::factory($this->_model, $data)->check(NULL, $subject);
+
+			return $this;
 		}
 
-		// Split data into local and embedded
-		$local    = array();
-		$embedded = array();
+		$local = array();
 
-		foreach ( $data as $field => $value)
+		foreach ( $this->_fields as $field_name => $field_data)
 		{
-			if ( isset($this->_fields[$field]))
+			if ( ! in_array($field_data['type'], array('has_one','has_many')))
 			{
-				if ( $this->_fields[$field]['type'] === 'has_one' || $this->_fields[$field]['type'] === 'has_many')
-				{
-					$embedded[$field] = $value;
-				}
-				else
-				{
-					$local[$field] = $value;
-				}
+				// by not checking if the field has been set, we also include default values (if any)
+				$local[$field_name] = $this->__get($field_name);
 			}
 		}
 
-		// Create array with validated data
-		$values = array();
-
-		// Validate local data (if required / available)
 		if ( $subject !== Mango::CHECK_ONLY || count($local))
 		{
+			// validate local data
 			$array = Validation::factory($local)
 				->bind(':model', $this);
 
-			// Add validation rules
+			// add validation rules
 			$array = $this->_check($array);
 
 			if ( $subject === Mango::CHECK_ONLY)
 			{
 				foreach ( $this->_fields as $field_name => $field_data)
 				{
-					if ( ! isset($data[$field_name]))
+					if ( ! $this->__isset($field_name))
 					{
 						// do not validate this field
 						unset($array[$field_name]);
@@ -1077,140 +1068,77 @@ abstract class Mango_Core implements Mango_Interface {
 				}
 			}
 
-			// Validate
-			if ( ! $array->check( $allow_empty ))
+			if ( ! $array->check())
 			{
-				// Validation failed
 				throw new Mango_Validation_Exception($this->_model,$array);
 			}
-
-			foreach ( $array as $field => $value)
-			{
-				// Don't include NULL values from fields that aren't set anyway
-				if ( $value !== NULL || $this->__isset($field))
-				{
-					$values[$field] = $value;
-				}
-			}
 		}
 
-		// Validate embedded documents
 		if ( $subject !== Mango::CHECK_LOCAL)
 		{
-			foreach ( $embedded as $field => $value)
+			// validate embedded documents
+			foreach ( $this->_fields as $field_name => $field_value)
 			{
-				if ( $this->_fields[$field]['type'] === 'has_one')
+				if ( $this->__isset($field_name) && in_array($field_data['type'], array('has_one','has_many')))
 				{
-					$values[$field] = Mango::factory($this->_fields[$field]['model'], $value, Mango::EXTEND)
-						->check($value, $subject, $allow_empty);
-				}
-				elseif ( $this->_fields[$field]['type'] === 'has_many')
-				{
-					$val = array();
-
-					foreach ( $value as $k => $v)
+					if ( $field_data['type'] === 'has_one')
 					{
-						$model = Mango::factory($this->_fields[$field]['model'],$v,Mango::EXTEND);
-	
-						try
+						$this->__get($field_name)->check(NULL, $subject);
+					}
+					else
+					{
+						foreach ( $this->__get($field_name) as $hm)
 						{
-							$val[$k] = $model->check($v, $subject, $allow_empty);
-						}
-						catch ( Mango_Validation_Exception $e)
-						{
-							// add sequence number of failed object to exception
-							$e->seq = $k;
-							throw $e;
+							try
+							{
+								$hm->check(NULL, $subject);
+							}
+							catch ( Mango_Validation_Exception $e)
+							{
+								// add sequence number of failed object to exception
+								$e->seq = $seq;
+								throw $e;
+							}
 						}
 					}
-
-					$values[$field] = $val;
 				}
 			}
 		}
 
-		// Return
-		return $values;
+		return $this;
 	}
 
 	/**
-	 * Add validation rules to validiate object based on
-	 * field specification.
+	 * Add validation rules to validation object
 	 *
-	 * You can overload this method and add your own
-	 * (more complicated) rules
-	 *
-	 * @param   Validate  Validate object
-	 * @return  Validate  Validate object
+	 * @param  Validation  Validation object
+	 * @return array
 	 */
 	protected function _check(Validation $data)
 	{
 		foreach ($this->_fields as $name => $field)
 		{
-			// field type rules
-			switch ( $field['type'])
+			if ( $field['type'] === 'email')
 			{
-				case 'enum':
-					$data->rule($name,'in_array',array(':value', $field['values']));
-				break;
-				case 'int':
-				case 'float':
-				case 'string':
-				case 'array':
-				case 'object':
-					$data->rule($name,'is_' . $field['type']);
-				break;
-				case 'email':
-					$data->rule($name,'email');
-				break;
-				case 'counter':
-					$data->rule($name,'is_int');
-				break;
-				case 'set':
-					$data->rule($name,'is_array');
-				break;
-				case 'boolean':
-					$data->rule($name,'Mango::_is_bool');
-				break;
-				case 'mixed':
-					$data->rule($name,'Mango::_is_mixed');
-				break;
+				$data->rule($name, 'email');
 			}
 
-			// field is required
-			if ( isset($field['required']) AND $field['required'] === TRUE)
+			if ( Arr::get($field,'required'))
 			{
-				$data->rule($name,'required');
+				$data->rule($name, 'required');
 			}
 
-			// min/max length/value
+			if ( Arr::get($field,'unique'))
+			{
+				$data->rule($name, array($this,'_is_unique'),array(':validation', $name));
+			}
+
 			foreach ( array('min_value','max_value','min_length','max_length') as $rule)
 			{
-				if ( isset($field[$rule]))
+				if ( Arr::get($field, $rule) !== NULL)
 				{
-					$data->rule($name,$rule,array(':value', $field[$rule]));
+					$data->rule($name, $rule, array(':value', $field[$rule]));
 				}
-			}
-
-			// value has to be unique
-			if ( isset($field['unique']) && ! in_array($field['type'], array('set','has_many')) && $field['unique'] === TRUE)
-			{
-				$data->rule($name,array($this,'_is_unique'),array(':validation', $name));
-			}
-
-			// rules contained in field spec
-			if ( isset($field['rules']))
-			{
-				$data->rules($name,$field['rules']);
-			}
-		}
-
-		foreach ( $this->_relations as $name => &$relation)
-		{
-			// belongs to ID field
-			if ( $relation['type'] === 'belongs_to')
-			{
-				$data->rule($name . '_id','not_empty');
 			}
 		}
 
@@ -1275,6 +1203,11 @@ abstract class Mango_Core implements Mango_Interface {
 			break;
 			case 'string':
 				$value = trim((string) $value);
+
+				if ( $value === '')
+				{
+					$value = NULL;
+				}
 
 				if ( Arr::get($field, 'xss_clean') && ! empty($value))
 				{
@@ -1612,26 +1545,6 @@ abstract class Mango_Core implements Mango_Interface {
 		}
 
 		return $this->db()->find_one( $this->_collection, array($field => $array[$field]), array('_id'=>TRUE)) === NULL;
-	}
-
-	/*
-	 * Validation rule
-	 *
-	 * A bit more flexible than PHP's is_bool to manage 'booleans' from eg form fields
-	 */
-	public static function _is_bool($value)
-	{
-		return in_array($value, array(1,0,'1','0',TRUE,FALSE));
-	}
-
-	/*
-	 * Validation rule
-	 *
-	 * Validates anything not object
-	 */
-	public static function _is_mixed($value)
-	{
-		return ! is_object($value);
 	}
 
 	/**
