@@ -1043,7 +1043,7 @@ abstract class Mango_Core implements Mango_Interface {
 			if ( ! in_array($field_data['type'], array('has_one','has_many')))
 			{
 				// by not checking if the field has been set, we also include default values (if any)
-				$local[$field_name] = $this->__get($field_name);
+				$local[$field_name] = Mango::normalize($this->__get($field_name));
 			}
 		}
 
@@ -1077,7 +1077,7 @@ abstract class Mango_Core implements Mango_Interface {
 		if ( $subject !== Mango::CHECK_LOCAL)
 		{
 			// validate embedded documents
-			foreach ( $this->_fields as $field_name => $field_value)
+			foreach ( $this->_fields as $field_name => $field_data)
 			{
 				if ( $this->__isset($field_name) && in_array($field_data['type'], array('has_one','has_many')))
 				{

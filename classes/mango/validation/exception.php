@@ -19,4 +19,4 @@ class Mango_Validation_Exception extends Validation_Exception {
 		parent::__construct($array, $message, $values, $code);
 	}
 
-} // End Mango_Validate_Exception
+} // End Mango_Validation_Exception
