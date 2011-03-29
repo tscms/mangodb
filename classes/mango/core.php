@@ -1087,7 +1087,7 @@ abstract class Mango_Core implements Mango_Interface {
 					}
 					else
 					{
-						foreach ( $this->__get($field_name) as $hm)
+						foreach ( $this->__get($field_name) as $seq => $hm)
 						{
 							try
 							{
