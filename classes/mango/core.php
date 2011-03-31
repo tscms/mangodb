@@ -650,6 +650,12 @@ abstract class Mango_Core implements Mango_Interface {
 		{
 			if ( isset($this->_object[$field_name]))
 			{
+				if ( $clean && Arr::get($field_data,'local') === TRUE)
+				{
+					// local fields are not stored in database
+					continue;
+				}
+
 				$value = $clean
 					? $this->_object[$field_name]
 					: $this->__get($field_name);
