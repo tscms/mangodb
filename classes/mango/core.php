@@ -1025,6 +1025,40 @@ abstract class Mango_Core implements Mango_Interface {
 	}
 
 	/**
+	 * Run complex filtering rules on the object (and its embedded objects).
+	 *
+	 * Some models have complex filtering rules. For example when filtering of field1 depends
+	 * on the value of existance of field2. In cases like these, you should overload
+	 * Mango_Core::pre_filter in your model, and filter & validate your models like this
+	 *
+	 * $model
+	 *    ->pre_filter()
+	 *    ->check();
+	 *
+	 * @return  Mango    $this
+	 */
+	public function pre_filter()
+	{
+		// call pre_filter() on embedded objects
+		foreach ( $this->_fields as $field_name => $field_data)
+		{
+			if ( $field_data['type'] === 'has_one' && $this->__isset($field_name))
+			{
+				$this->__get($field_name)->pre_filter();
+			}
+			else if ( $field_data['type'] === 'has_many' && $this->__isset($field_name))
+			{
+				foreach ( $this->__get($field_name) as $f)
+				{
+					$f->pre_filter();
+				}
+			}
+		}
+
+		return $this;
+	}
+
+	/**
 	 * Validates data. If no data supplied, uses current data in document. Checks embedded_documents as well.
 	 *
 	 * @throws  Validation_Exception  when an error is found
