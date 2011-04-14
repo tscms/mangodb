@@ -21,9 +21,10 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 	 *
 	 * @param   array   Current data
 	 * @param   string  Type Hint
+	 * @param   boolean Is data clean (from DB?)
 	 * @return  void
 	 */
-	public function __construct($array = array(),$type_hint = NULL)
+	public function __construct($array = array(), $type_hint = NULL, $clean = FALSE)
 	{
 		// Make sure we're dealing with an array
 		if ( $array instanceof Mango_ArrayObject)
@@ -44,7 +45,7 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 			$this->_type_hint = strtolower($type_hint);
 
 			// load to make sure values are of correct type
-			$this->load();
+			$this->load($clean);
 		}
 	}
 
@@ -55,20 +56,24 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 
 	/**
 	 * Ensures all values are of correct type
+	 *
+	 * @param   boolean Is data clean (from DB?)
 	 */
-	public function load()
+	public function load($clean)
 	{
 		foreach( $this as &$value)
 		{
 			// replace by value loaded to correct type
-			$value = $this->load_type($value);
+			$value = $this->load_type($value, $clean);
 		}
 	}
 
 	/**
 	 * Loads a value into correct type
+   *
+	 * @param   boolean Is data clean (from DB?)
 	 */
-	public function load_type($value)
+	public function load_type($value, $clean = FALSE)
 	{
 		switch ( $this->_type_hint)
 		{
@@ -77,25 +82,25 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 			break;
 			case 'counter':
 				$value = is_array($value)
-					? new Mango_Array($value, $this->_type_hint) // multidimensional array of counters
+					? new Mango_Array($value, $this->_type_hint, $clean) // multidimensional array of counters
 					: new Mango_Counter($value);
 			break;
 			case 'set':
 				if ( is_array($value))
 				{
-					$value = new Mango_Set($value,$this->_type_hint);
+					$value = new Mango_Set($value, $this->_type_hint, FALSE, $clean);
 				}
 			break;
 			case 'array':
 				if ( is_array($value))
 				{
-					$value = new Mango_Array($value,$this->_type_hint);
+					$value = new Mango_Array($value, $this->_type_hint, $clean);
 				}
 			break;
 			default:
 				$value = is_object($value) 
 					? $value
-					: Mango::factory($this->_type_hint,$value,Mango::CLEAN);
+					: Mango::factory($this->_type_hint, $value, $clean ? Mango::CLEAN : Mango::CHANGE);
 			break;
 		}
 

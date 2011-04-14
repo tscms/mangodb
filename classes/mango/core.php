@@ -61,17 +61,9 @@ abstract class Mango_Core implements Mango_Interface {
 		// Create a new instance of the model by clone
 		$model = clone $models[$name];
 
-		if ( $values)
+		if ( $values && $load_type !== Mango::EXTEND)
 		{
-			switch ( $load_type)
-			{
-				case Mango::CHANGE:
-					$model->values($values);
-				break;
-				case Mango::CLEAN:
-					$model->values($values,TRUE);
-				break;
-			}
+			$model->values($values, $load_type === Mango::CLEAN);
 		}
 
 		return $model;
@@ -621,10 +613,10 @@ abstract class Mango_Core implements Mango_Interface {
 
 		foreach ($values as $field => $value)
 		{
-			if ( $clean === TRUE)
+			if ( $clean)
 			{
 				// Set the field directly
-				$this->_object[$field] = $this->load_field($field,$value);
+				$this->_object[$field] = $this->load_field($field,$value,TRUE);
 			}
 			else
 			{
@@ -1190,9 +1182,10 @@ abstract class Mango_Core implements Mango_Interface {
 	 *
 	 * @param   string  field name
 	 * @param   mixed   field value
+	 * @param   boolean is value clean (from Db)
 	 * @return  mixed   formatted value
 	 */
-	protected function load_field($name, $value)
+	protected function load_field($name, $value, $clean = FALSE)
 	{
 		// Load field data
 		$field = $this->_fields[$name];
@@ -1239,25 +1232,33 @@ abstract class Mango_Core implements Mango_Interface {
 				$value = (bool) $value;
 			break;
 			case 'email':
-				$value = strtolower(trim((string) $value));
-			break;
-			case 'string':
-				$value = trim((string) $value);
+				if ( ! $clean)
+				{
+					$value = strtolower(trim((string) $value));
+				}
 
 				if ( $value === '')
 				{
 					$value = NULL;
 				}
+			break;
+			case 'string':
+				$value = trim((string) $value);
 
-				if ( Arr::get($field, 'xss_clean') && ! empty($value))
+				if ( ! $clean && Arr::get($field, 'xss_clean') && ! empty($value))
 				{
 					$value = Security::xss_clean($value);
+				}
+
+				if ( $value === '')
+				{
+					$value = NULL;
 				}
 			break;
 			case 'has_one':
 				if ( is_array($value))
 				{
-					$value = Mango::factory($field['model'], $value, Mango::CLEAN)->set_parent($this);
+					$value = Mango::factory($field['model'], $value, $clean ? Mango::CLEAN : Mango::CHANGE)->set_parent($this);
 				}
 
 				if ( ! $value instanceof Mango)
@@ -1266,7 +1267,7 @@ abstract class Mango_Core implements Mango_Interface {
 				}
 			break;
 			case 'has_many':
-				$value = new Mango_Set($value, $field['model'], ! isset($field['unique']) ? TRUE : $field['unique']);
+				$value = new Mango_Set($value, $field['model'], Arr::get($field, 'unique', TRUE), $clean);
 
 				foreach ( $value as $model)
 				{
@@ -1277,10 +1278,10 @@ abstract class Mango_Core implements Mango_Interface {
 				$value = new Mango_Counter($value);
 			break;
 			case 'array':
-				$value = new Mango_Array($value, isset($field['type_hint']) ? $field['type_hint'] : NULL);
+				$value = new Mango_Array($value, Arr::get($field, 'type_hint'), $clean);
 			break;
 			case 'set':
-				$value = new Mango_Set($value, isset($field['type_hint']) ? $field['type_hint'] : NULL, isset($field['unique']) ? $field['unique'] : FALSE);
+				$value = new Mango_Set($value, Arr::get($field, 'type_hint'), Arr::get($field, 'unique', FALSE), $clean);
 			break;
 			case 'mixed':
 				$value = ! is_object($value)
@@ -1289,8 +1290,11 @@ abstract class Mango_Core implements Mango_Interface {
 			break;
 		}
 
-		// Apply filters
-		$value = $this->run_filters($name, $value);
+		if ( ! $clean)
+		{
+			// Apply filters
+			$value = $this->run_filters($name, $value);
+		}
 
 		return $value;
 	}

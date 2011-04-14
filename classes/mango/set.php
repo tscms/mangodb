@@ -23,13 +23,14 @@ class Mango_Set extends Mango_ArrayObject {
 	 * @param   array    Current data
 	 * @param   string   Type Hint
 	 * @param   boolean  If all values in set should be unique
+	 * @param   boolean  Is data clean (from DB?)
 	 * @return  void
 	 */
-	public function __construct($array = array(), $type_hint = NULL, $unique = FALSE)
+	public function __construct($array = array(), $type_hint = NULL, $unique = FALSE, $clean = FALSE)
 	{
 		$this->_unique = $unique;
 
-		parent::__construct($array, $type_hint);
+		parent::__construct($array, $type_hint, $clean);
 	}
 
 	/*
