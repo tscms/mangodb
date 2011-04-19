@@ -1190,6 +1190,12 @@ abstract class Mango_Core implements Mango_Interface {
 		// Load field data
 		$field = $this->_fields[$name];
 
+		if ( ! $clean)
+		{
+			// Apply filters
+			$value = $this->run_filters($name, $value);
+		}
+
 		switch ( $field['type'])
 		{
 			case 'MongoId':
@@ -1290,12 +1296,6 @@ abstract class Mango_Core implements Mango_Interface {
 			break;
 		}
 
-		if ( ! $clean)
-		{
-			// Apply filters
-			$value = $this->run_filters($name, $value);
-		}
-
 		return $value;
 	}
 
@@ -1325,7 +1325,7 @@ abstract class Mango_Core implements Mango_Interface {
 			':model' => $this,
 		);
 
-		foreach ($filters as $array)
+		foreach ($this->_fields[$name]['filters'] as $array)
 		{
 			// Value needs to be bound inside the loop so we are always using the
 			// version that was modified by the filters that already ran
