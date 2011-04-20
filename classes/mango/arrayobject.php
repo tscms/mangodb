@@ -407,7 +407,7 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 			$keys[] = $value;
 			$refs[] = $next;
 
-			$next = &$next[$value];
+			$next = $next[$value];
 		}
 
 		// reverse arrays
