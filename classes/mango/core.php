@@ -265,7 +265,7 @@ abstract class Mango_Core implements Mango_Interface {
 	 * @param   Object   parent object
 	 * @return  this
 	 */
-	protected function set_parent( Mango & $parent)
+	public function set_parent( Mango & $parent)
 	{
 		if ( ! $this->_embedded)
 		{
