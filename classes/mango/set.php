@@ -30,6 +30,18 @@ class Mango_Set extends Mango_ArrayObject {
 	{
 		$this->_unique = $unique;
 
+		if ( ! $clean && $this->_unique && isset($array))
+		{
+			// Make sure we're dealing with an array
+			if ( $array instanceof Mango_ArrayObject)
+			{
+				$array = $array->as_array(FALSE);
+			}
+
+			// Only load unique values
+			$array = array_unique($array);
+		}
+
 		parent::__construct($array, $type_hint, $clean);
 	}
 
