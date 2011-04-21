@@ -38,8 +38,18 @@ class Mango_Set extends Mango_ArrayObject {
 				$array = $array->as_array(FALSE);
 			}
 
+			$unique = array();
+
+			foreach ( $array as $value)
+			{
+				if ( ! in_array($value, $unique, TRUE))
+				{
+					$unique[] = $value;
+				}
+			}
+
 			// Only load unique values
-			$array = array_unique($array);
+			$array = $unique;
 		}
 
 		parent::__construct($array, $type_hint, $clean);
