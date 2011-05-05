@@ -71,9 +71,9 @@ class Mango_Iterator implements Iterator, Countable {
 	/**
 	 * Countable: count
 	 */
-	public function count()
+	public function count( $found_only = FALSE)
 	{
-		return $this->_cursor->count();
+		return $this->_cursor->count($found_only);
 	}
 
 	/**
