@@ -75,9 +75,9 @@ abstract class Mango_Core implements Mango_Interface {
 	protected $_model;
 
 	/**
-	 * @var  string  database instance name
+	 * @var  string  database instance name (defaults to MangoDB::$default)
 	 */
-	protected $_db = 'default';
+	protected $_db = NULL;
 
 	/**
 	 * @var  string  database collection name
