@@ -1582,7 +1582,7 @@ abstract class Mango_Core implements Mango_Interface {
 	 */
 	public function _is_unique(Validation $array, $field)
 	{
-		if ( $this->loaded() AND $this->_object[$field] === $array[$field])
+		if ( $this->loaded() AND ! $this->is_changed($field))
 		{
 			// This value is unchanged
 			return TRUE;
