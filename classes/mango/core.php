@@ -110,6 +110,11 @@ abstract class Mango_Core implements Mango_Interface {
 	protected $_object = array();
 
 	/**
+	 * @var  array  clean object data (straight from DB)
+	 */
+	protected $_clean = array();
+
+	/**
 	 * @var  array  related data
 	 */
 	protected $_related = array();
@@ -162,7 +167,7 @@ abstract class Mango_Core implements Mango_Interface {
 	 */
 	public function __sleep()
 	{
-		return array('_object', '_changed');
+		return array('_object', '_clean', '_changed');
 	}
 
 	/**
@@ -183,7 +188,7 @@ abstract class Mango_Core implements Mango_Interface {
 	public function __isset($name)
 	{
 		return isset($this->_fields[$name]) 
-			? isset($this->_object[$name]) 
+			? (isset($this->_object[$name])  || isset($this->_clean[$name]))
 			: isset($this->_related[$name]);
 	}
 
@@ -192,7 +197,7 @@ abstract class Mango_Core implements Mango_Interface {
 	 */
 	public function clear()
 	{
-		$this->_object = $this->_changed = array();
+		$this->_object = $this->_clean = $this->_changed = array();
 
 		return $this;
 	}
@@ -311,6 +316,15 @@ abstract class Mango_Core implements Mango_Interface {
 		{
 			$field = $this->_fields[$name];
 
+			if ( isset($this->_clean[$name]))
+			{
+				// lazy load - field hasn't been loaded yet
+
+				// move value from _clean to _object
+				$this->_object[$name] = $this->load_field($name, $this->_clean[$name], TRUE);
+				unset($this->_clean[$name]);
+			}
+
 			$value = isset($this->_object[$name])
 				? $this->_object[$name]
 				: NULL;
@@ -358,19 +372,20 @@ abstract class Mango_Core implements Mango_Interface {
 				{
 					case 'has_one':
 						$criteria = array($this->_model . '_id' => $this->_id);
-						$limit = 1;
+						$limit    = 1;
 					break;
 					case 'belongs_to':
-						$criteria = array('_id' => $this->_object[$name . '_id']);
-						$limit = 1;
+						$id       = isset($this->_clean[$name . '_id']) ? $this->_clean[$name . '_id'] : $this->_object[$name . '_id'];
+						$criteria = array('_id' => $id);
+						$limit    = 1;
 					break;
 					case 'has_many':
 						$criteria = array($this->_model . '_id' => $this->_id);
-						$limit = FALSE;
+						$limit    = FALSE;
 					break;
 					case 'has_and_belongs_to_many':
 						$criteria = array('_id' => array('$in' => $this->__get($name . '_ids')->as_array()));
-						$limit = FALSE;
+						$limit    = FALSE;
 					break;
 				}
 
@@ -414,7 +429,7 @@ abstract class Mango_Core implements Mango_Interface {
 
 			$value = $this->load_field($name, $value);
 
-			if ( isset($this->_object[$name]))
+			if ( $this->__isset($name))
 			{
 				if ( $value === NULL || $match_default)
 				{
@@ -423,7 +438,10 @@ abstract class Mango_Core implements Mango_Interface {
 				}
 
 				// don't update value if the value did not change
-				if ( Mango::normalize($this->_object[$name]) === Mango::normalize($value))
+				$same_clean  = isset($this->_clean[$name]) && $this->_clean[$name] === $value;
+				$same_object = ! $same_clean && isset($this->_object[$name]) && Mango::normalize($this->_object[$name]) === $value;
+
+				if ( $same_clean || $same_object)
 				{
 					return FALSE;
 				}
@@ -436,6 +454,7 @@ abstract class Mango_Core implements Mango_Interface {
 
 			// update object
 			$this->_object[$name] = $value;
+			unset($this->_clean[$name]);
 
 			// mark change
 			$this->_changed[$name] = TRUE;
@@ -470,7 +489,7 @@ abstract class Mango_Core implements Mango_Interface {
 			if ( $this->__isset($name))
 			{
 				// unset field
-				unset($this->_object[$name]);
+				unset($this->_object[$name], $this->_clean[$name]);
 
 				// mark unset
 				$this->_changed[$name] = FALSE;
@@ -611,14 +630,14 @@ abstract class Mango_Core implements Mango_Interface {
 		// Remove all values which do not have a corresponding field
 		$values = array_intersect_key($values, $this->_fields);
 
-		foreach ($values as $field => $value)
+		if ( $clean)
 		{
-			if ( $clean)
-			{
-				// Set the field directly
-				$this->_object[$field] = $this->load_field($field,$value,TRUE);
-			}
-			else
+			// lazy loading - clean values are loaded when accessed
+			$this->_clean = $values;
+		}
+		else
+		{
+			foreach ($values as $field => $value)
 			{
 				// Set the field using __set()
 				$this->$field = $value;
@@ -640,7 +659,7 @@ abstract class Mango_Core implements Mango_Interface {
 
 		foreach ( $this->_fields as $field_name => $field_data)
 		{
-			if ( isset($this->_object[$field_name]))
+			if ( $this->__isset($field_name))
 			{
 				if ( $clean && Arr::get($field_data,'local') === TRUE)
 				{
@@ -648,14 +667,29 @@ abstract class Mango_Core implements Mango_Interface {
 					continue;
 				}
 
-				$value = $clean
-					? $this->_object[$field_name]
-					: $this->__get($field_name);
+				if ( $clean && isset($this->_clean[$field_name]))
+				{
+					// use 'clean' value
+					$array[ $field_name ] = $this->_clean[$field_name];
+				}
+				else
+				{
+					// use 'loaded' value (that has to be normalized)
+					$value = $clean
+						? $this->_object[$field_name]
+						: $this->__get($field_name);
 
-				$array[ $field_name ] = Mango::normalize( $value, $clean );
+					if ( ! $clean && isset($field_data['xss_clean']) && is_string($value))
+					{
+						$value = htmlspecialchars_decode($value);
+					}
+
+					$array[ $field_name ] = Mango::normalize( $value, $clean );
+				}
 			}
 			else if ( ! $clean && isset($field_data['default']))
 			{
+				// use default value
 				$array[ $field_name ] = $field_data['default'];
 			}
 		}
@@ -694,9 +728,9 @@ abstract class Mango_Core implements Mango_Interface {
 				continue;
 			}
 
-			$value = $this->__isset($name) 
-				? $this->_object[$name] 
-				: NULL;
+			$value = isset($this->_object[$name])
+				? $this->_object[$name]
+				: Arr::get($this->_clean, $name);
 
 			// prepare prefix
 			$path = array_merge($prefix,array($name));
