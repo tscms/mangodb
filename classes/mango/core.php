@@ -1211,6 +1211,11 @@ abstract class Mango_Core implements Mango_Interface {
 					$data->rule($name, $rule, array(':value', $field[$rule]));
 				}
 			}
+
+			if ( isset($field['rules']))
+			{
+				$data->rules($field['rules']);
+			}
 		}
 
 		return $data;
