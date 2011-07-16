@@ -15,6 +15,11 @@ abstract class Mango_Core implements Mango_Interface {
 	const CHECK_LOCAL = 1; // Full validation of local data only (not the embedded documents)
 	const CHECK_ONLY  = 2; // Selective validation of supplied local fields only
 
+	// Default maximum length of string fields, longer values are cut off.
+	// You can overload this on a per field basis by defining a 'max_size' value in the field definition.
+	const MAX_SIZE_STRING = 65536;
+	
+
 	/**
 	 * Load an Mango model.
 	 *
@@ -1285,9 +1290,19 @@ abstract class Mango_Core implements Mango_Interface {
 			case 'string':
 				$value = trim((string) $value);
 
-				if ( ! $clean && Arr::get($field, 'xss_clean') && ! empty($value))
+				if ( ! $clean)
 				{
-					$value = Security::xss_clean($value);
+					$max_size = Arr::get($field, 'max_size', Mango::MAX_SIZE_STRING);
+
+					if ( UTF8::strlen($value) > $max_size)
+					{
+						$value = UTF8::substr($value, 0, $max_size);
+					}
+
+					if ( Arr::get($field, 'xss_clean') && ! empty($value))
+					{
+						$value = Security::xss_clean($value);
+					}
 				}
 
 				if ( $value === '')
