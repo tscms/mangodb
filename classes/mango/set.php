@@ -52,7 +52,7 @@ class Mango_Set extends Mango_ArrayObject {
 			$array = $unique;
 		}
 
-		parent::__construct($array, $type_hint, $clean);
+		parent::__construct(array_values($array), $type_hint, $clean);
 	}
 
 	/*
