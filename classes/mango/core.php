@@ -37,7 +37,7 @@ abstract class Mango_Core implements Mango_Interface {
 			if ( self::$_cti === NULL)
 			{
 				// load extension config
-				self::$_cti = Kohana::config('mangoCTI');
+				self::$_cti = Kohana::$config->load('mangoCTI');
 			}
 
 			while ( isset(self::$_cti[$name]))
@@ -1201,7 +1201,7 @@ abstract class Mango_Core implements Mango_Interface {
 
 			if ( Arr::get($field,'unique'))
 			{
-				$data->rule($name, array($this,'_is_unique'),array(':validation', $name));
+				$data->rule($name, array(':model','_is_unique'),array(':validation', $name));
 			}
 
 			foreach ( array('min_value','max_value','min_length','max_length') as $rule)

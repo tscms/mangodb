@@ -4,17 +4,14 @@ class Mango_Validation extends Kohana_Validation {
 
 	protected $_empty_rules = array('not_empty', 'matches', 'required');
 
-	/**
-	 * Removes a field, and all its rules and its label from Validation object
-	 */
-	public function offsetUnset($field)
+	public function offsetUnset($offset)
 	{
-		unset($this->_labels[$field], $this->_rules[$field]);
+		unset($this->_labels[$offset], $this->_rules[$offset], $this->_data[$offset]);
+	}
 
-		if ( isset($this[$field]))
-		{
-			parent::offsetUnset($field);
-		}
+	public function offsetSet($offset, $value)
+	{
+		$this->_data[$offset] = $value;
 	}
 
 } // End Mango_Validation
