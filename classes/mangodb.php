@@ -378,6 +378,10 @@ class MangoDB {
 			 ? $collection_name . '.' . $command
 			 : $command;
 
+			if ( isset($query))    $_bm_name .= ' (' . JSON_encode($query) . ')';
+			if ( isset($criteria)) $_bm_name .= ' (' . JSON_encode($criteria) . ')';
+			if ( isset($values))   $_bm_name .= ' (' . JSON_encode($values) . ')';
+
 			$_bm = Profiler::start("MangoDB {$this->_name}",$_bm_name);
 		}
 
