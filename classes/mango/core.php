@@ -1214,7 +1214,7 @@ abstract class Mango_Core implements Mango_Interface {
 
 			if ( isset($field['rules']))
 			{
-				$data->rules($field['rules']);
+				$data->rules($name, $field['rules']);
 			}
 		}
 
