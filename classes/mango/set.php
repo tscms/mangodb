@@ -38,6 +38,9 @@ class Mango_Set extends Mango_ArrayObject {
 				$array = $array->as_array(FALSE);
 			}
 
+			// Make sure we're dealing with non-associative arrays
+			$array = array_values($array);
+
 			if ( $this->_unique && isset($array))
 			{
 				$unique = array();
@@ -55,7 +58,7 @@ class Mango_Set extends Mango_ArrayObject {
 			}
 		}
 
-		parent::__construct(array_values($array), $type_hint, $clean);
+		parent::__construct($array, $type_hint, $clean);
 	}
 
 	/*
