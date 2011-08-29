@@ -1398,9 +1398,22 @@ abstract class Mango_Core implements Mango_Interface {
 				}
 			}
 
-			if (is_array($filter) OR ! is_string($filter))
+			if (is_array($filter))
 			{
-				// This is either a callback as an array or a lambda
+				// callback
+
+				// Allows filters: array(':model', 'some_rule');
+				if (is_string($filter[0]) AND array_key_exists($filter[0], $_bound))
+				{
+					// Replace with bound value
+					$filter[0] = $_bound[$filter[0]];
+				}
+
+				$value = call_user_func_array($filter, $params);
+			}
+			elseif ( ! is_string($filter))
+			{
+				// This is a lambda
 				$value = call_user_func_array($filter, $params);
 			}
 			elseif (strpos($filter, '::') === FALSE)
