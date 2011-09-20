@@ -34,26 +34,7 @@ abstract class Mango_Core implements Mango_Interface {
 
 		if ( $values)
 		{
-			if ( self::$_cti === NULL)
-			{
-				// load extension config
-				self::$_cti = Kohana::$config->load('mangoCTI');
-			}
-
-			while ( isset(self::$_cti[$name]))
-			{
-				$key = key(self::$_cti[$name]);
-
-				if ( isset($values[$key]) && isset(self::$_cti[$name][$key][$values[$key]]))
-				{
-					// extend
-					$name = self::$_cti[$name][$key][$values[$key]];
-				}
-				else
-				{
-					break;
-				}
-			}
+			$name = self::extend($name, $values);
 		}
 
 		if ( ! isset($models[$name]))
@@ -72,6 +53,39 @@ abstract class Mango_Core implements Mango_Interface {
 		}
 
 		return $model;
+	}
+
+	/**
+	 * Finds extended model name based on values array
+	 *
+	 * @param   string   name of (base) model
+	 * @param   array    data from database
+	 * @return  string   name of (extended) model
+	 */
+	public static function extend($name, array $values)
+	{
+		if ( self::$_cti === NULL)
+		{
+			// load extension config
+			self::$_cti = Kohana::$config->load('mangoCTI');
+		}
+
+		while ( isset(self::$_cti[$name]))
+		{
+			$key = key(self::$_cti[$name]);
+
+			if ( isset($values[$key]) && isset(self::$_cti[$name][$key][$values[$key]]))
+			{
+				// extend
+				$name = self::$_cti[$name][$key][$values[$key]];
+			}
+			else
+			{
+				break;
+			}
+		}
+
+		return $name;
 	}
 
 	/**
@@ -847,7 +861,7 @@ abstract class Mango_Core implements Mango_Interface {
 	 * @param   int    skip a number of results
 	 * @param   array  specify the fields to return
 	 * @param   array  specify additional criteria
-	 * @return  mixed  if limit = 1, returns $this, otherwise returns iterator
+	 * @return  mixed  if limit = 1, returns $this (or extended model), otherwise returns iterator
 	 */
 	public function load($limit = 1, array $sort = NULL, $skip = NULL, array $fields = array(), array $criteria = array())
 	{
@@ -875,9 +889,16 @@ abstract class Mango_Core implements Mango_Interface {
 		{
 			$values = $this->db()->find_one($this->_collection,$criteria,$fields);
 
-			return $values === NULL
-				? $this
-				: $this->values($values, TRUE);
+			if ( $values === NULL)
+			{
+				return $this;
+			}
+			else
+			{
+				return $this->_model !== self::extend($this->_model, $values)
+					? Mango::factory( self::extend($this->_model, $values), $values, Mango::CLEAN)
+					: $this->values($values, TRUE);
+			}
 		}
 		else
 		{
