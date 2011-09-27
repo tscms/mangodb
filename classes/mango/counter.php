@@ -62,6 +62,16 @@ class Mango_Counter implements Mango_Interface {
 		return $this->_value;
 	}
 
+	/**
+	 * Returns value of counter
+	 *
+	 * @return  int
+	 */
+	public function as_int()
+	{
+		return $this->_value;
+	}
+
 	/*
 	 * Return array of changes
 	 */
