@@ -235,6 +235,16 @@ abstract class Mango_Core implements Mango_Interface {
 	}
 
 	/**
+	 * Return field data
+	 *
+	 * @return  array  field data
+	 */
+	public function fields()
+	{
+		return $this->_fields;
+	}
+
+	/**
 	 * Return TRUE if field has been changed
 	 *
 	 * @param   string   field name
