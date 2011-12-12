@@ -1309,6 +1309,14 @@ abstract class Mango_Core implements Mango_Interface {
 			case 'float':
 				$value = (float) $value;
 			break;
+			case 'timestamp':
+				if ( is_string($value))
+				{
+					$value = ctype_digit($value)
+						? (int) $value
+						: strtotime($value);
+				}
+			break;
 			case 'boolean':
 				$value = (bool) $value;
 			break;
