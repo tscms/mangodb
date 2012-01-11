@@ -13,22 +13,22 @@ class Mango_Set extends Mango_ArrayObject {
 	protected $_mode;
 
 	/**
-	 * Requires all values in set to be unique
+	 * Are duplicates allowed
 	 */
-	protected $_unique;
+	protected $_duplicates;
 
 	/*
 	 * Constructor
 	 *
 	 * @param   array    Current data
 	 * @param   string   Type Hint
-	 * @param   boolean  If all values in set should be unique
+	 * @param   boolean  Are duplicates allowed
 	 * @param   boolean  Is data clean (from DB?)
 	 * @return  void
 	 */
-	public function __construct($array = array(), $type_hint = NULL, $unique = FALSE, $clean = FALSE)
+	public function __construct($array = array(), $type_hint = NULL, $duplicates = TRUE, $clean = FALSE)
 	{
-		$this->_unique = $unique;
+		$this->_duplicates = $duplicates;
 
 		if ( ! $clean)
 		{
@@ -41,7 +41,7 @@ class Mango_Set extends Mango_ArrayObject {
 			// Make sure we're dealing with non-associative arrays
 			$array = array_values($array);
 
-			if ( $this->_unique && isset($array))
+			if ( ! $this->_duplicates && isset($array))
 			{
 				$unique = array();
 
@@ -214,7 +214,7 @@ class Mango_Set extends Mango_ArrayObject {
 
 		$mode = is_int($index) && $this->offsetExists($index)
 			? 'set'
-			: ($this->_unique ? 'addToSet' : 'push');
+			: ($this->_duplicates ? 'push' : 'addToSet');
 
 		if ( isset($this->_mode) && $this->_mode !== $mode)
 		{
@@ -224,7 +224,7 @@ class Mango_Set extends Mango_ArrayObject {
 			));
 		}
 
-		if ( $this->_unique && $this->find($this->load_type($newval)) !== FALSE)
+		if ( ! $this->_duplicates && $this->find($this->load_type($newval)) !== FALSE)
 		{
 			// value has been added already
 			return TRUE;
@@ -262,9 +262,7 @@ class Mango_Set extends Mango_ArrayObject {
 			return;
 		}
 
-		$mode = $this->_unique
-			? 'pull'
-			: 'unset';
+		$mode = $this->_duplicates ? 'unset' : 'pull';
 
 		if ( isset($this->_mode) && $this->_mode !== $mode)
 		{
@@ -276,9 +274,9 @@ class Mango_Set extends Mango_ArrayObject {
 
 		// set mode & pulled value
 		$this->_mode = $mode;
-		$this->_changed[] = $this->_unique
-			? $this->offsetGet($index)
-			: $index;
+		$this->_changed[] = $this->_duplicates
+			? $index
+			: $this->offsetGet($index);
 
 		parent::offsetUnset($index);
 	}

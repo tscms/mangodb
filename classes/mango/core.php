@@ -610,7 +610,7 @@ abstract class Mango_Core implements Mango_Interface {
 						$this->_fields[$name . '_id'] = array('type'=>'MongoId', 'required' => TRUE);
 					break;
 					case 'has_and_belongs_to_many':
-						$this->_fields[$name . '_ids'] = array('type'=>'set', 'unique' => TRUE);
+						$this->_fields[$name . '_ids'] = array('type'=>'set', 'duplicates' => FALSE);
 					break;
 				}
 			}
@@ -1366,7 +1366,7 @@ abstract class Mango_Core implements Mango_Interface {
 				}
 			break;
 			case 'has_many':
-				$value = new Mango_Set($value, $field['model'], Arr::get($field, 'unique', TRUE), $clean);
+				$value = new Mango_Set($value, $field['model'], Arr::get($field, 'duplicates', FALSE), $clean);
 
 				foreach ( $value as $model)
 				{
@@ -1380,7 +1380,7 @@ abstract class Mango_Core implements Mango_Interface {
 				$value = new Mango_Array($value, Arr::get($field, 'type_hint'), $clean);
 			break;
 			case 'set':
-				$value = new Mango_Set($value, Arr::get($field, 'type_hint'), Arr::get($field, 'unique', FALSE), $clean);
+				$value = new Mango_Set($value, Arr::get($field, 'type_hint'), Arr::get($field, 'duplicates', TRUE), $clean);
 			break;
 			case 'mixed':
 				$value = ! is_object($value)
