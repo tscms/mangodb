@@ -656,20 +656,20 @@ abstract class Mango_Core implements Mango_Interface {
 	 */
 	public function values(array $values, $clean = FALSE)
 	{
-		// Remove all values which do not have a corresponding field
-		$values = array_intersect_key($values, $this->_fields);
-
 		if ( $clean)
 		{
 			// lazy loading - clean values are loaded when accessed
-			$this->_clean = $values;
+			$this->_clean = array_intersect_key($values, $this->_fields);
 		}
 		else
 		{
 			foreach ($values as $field => $value)
 			{
-				// Set the field using __set()
-				$this->$field = $value;
+				if ( isset($this->_fields[$field]) || ( isset($this->_relations[$field]) && $this->_relations[$field]['type'] === 'belongs_to'))
+				{
+					// Set the field using __set()
+					$this->$field = $value;
+				}
 			}
 		}
 
