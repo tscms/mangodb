@@ -1357,13 +1357,15 @@ abstract class Mango_Core implements Mango_Interface {
 			case 'has_one':
 				if ( is_array($value))
 				{
-					$value = Mango::factory($field['model'], $value, $clean ? Mango::CLEAN : Mango::CHANGE)->set_parent($this);
+					$value = Mango::factory($field['model'], $value, $clean ? Mango::CLEAN : Mango::CHANGE);
 				}
 
 				if ( ! $value instanceof Mango)
 				{
 					$value = NULL;
 				}
+
+				$value->set_parent($this);
 			break;
 			case 'has_many':
 				$value = new Mango_Set($value, $field['model'], Arr::get($field, 'duplicates', FALSE), $clean);
