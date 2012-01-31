@@ -1364,8 +1364,10 @@ abstract class Mango_Core implements Mango_Interface {
 				{
 					$value = NULL;
 				}
-
-				$value->set_parent($this);
+				else
+				{
+					$value->set_parent($this);
+				}
 			break;
 			case 'has_many':
 				$value = new Mango_Set($value, $field['model'], Arr::get($field, 'duplicates', FALSE), $clean);
