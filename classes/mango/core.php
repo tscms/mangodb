@@ -1286,7 +1286,7 @@ abstract class Mango_Core implements Mango_Interface {
 				}
 			break;
 			case 'enum':
-				if ( is_numeric($value) && (int) $value == $value)
+				if ( $clean)
 				{
 					$value = isset($field['values'][$value]) ? $value : NULL;
 				}
