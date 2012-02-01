@@ -488,9 +488,13 @@ abstract class Mango_Core implements Mango_Interface {
 			// mark change
 			$this->_changed[$name] = TRUE;
 		}
-		elseif ( isset($this->_relations[$name]) && $this->_relations[$name]['type'] === 'belongs_to')
+		elseif ( isset($this->_relations[$name]) && in_array($this->_relations[$name]['type'], array('belongs_to', 'has_one')))
 		{
-			$this->__set($name . '_id',$value->_id);
+			if ( $this->_relations[$name]['type'] === 'belongs_to')
+			{
+				$this->__set($name . '_id',$value->_id);
+			}
+
 			$this->_related[$name] = $value;
 		}
 		else
