@@ -1273,128 +1273,132 @@ abstract class Mango_Core implements Mango_Interface {
 		{
 			// Apply filters
 			$value = $this->run_filters($name, $value);
+
+			// Empty string
+			if ( is_string($value) && $value === '')
+			{
+				$value = NULL;
+			}
 		}
 
-		switch ( $field['type'])
+		if ( $value !== NULL || $clean === TRUE)
 		{
-			case 'MongoId':
-				if ( $value !== NULL AND ! $value instanceof MongoId)
-				{
-					$value = new MongoId($value);
-				}
-			break;
-			case 'date':
-				if ( ! $value instanceof MongoDate)
-				{
-					$value = new MongoDate( is_int($value) ? $value : strtotime($value));
-				}
-			break;
-			case 'enum':
-				if ( $clean)
-				{
-					$value = isset($field['values'][$value]) ? $value : NULL;
-				}
-				else
-				{
-					$value = ($key = array_search($value,$field['values'])) !== FALSE ? $key : NULL;
-				}
-			break;
-			case 'int':
-				if ((float) $value > PHP_INT_MAX)
-				{
-					// This number cannot be represented by a PHP integer, so we convert it to a float
+			switch ( $field['type'])
+			{
+				case 'MongoId':
+					if ( $value !== NULL AND ! $value instanceof MongoId)
+					{
+						$value = new MongoId($value);
+					}
+				break;
+				case 'date':
+					if ( ! $value instanceof MongoDate)
+					{
+						$value = new MongoDate( is_int($value) ? $value : strtotime($value));
+					}
+				break;
+				case 'enum':
+					if ( $clean)
+					{
+						$value = isset($field['values'][$value]) ? $value : NULL;
+					}
+					else
+					{
+						$value = ($key = array_search($value,$field['values'])) !== FALSE ? $key : NULL;
+					}
+				break;
+				case 'int':
+					if ((float) $value > PHP_INT_MAX)
+					{
+						// This number cannot be represented by a PHP integer, so we convert it to a float
+						$value = (float) $value;
+					}
+					else
+					{
+						$value = (int) $value;
+					}
+				break;
+				case 'float':
 					$value = (float) $value;
-				}
-				else
-				{
-					$value = (int) $value;
-				}
-			break;
-			case 'float':
-				$value = (float) $value;
-			break;
-			case 'timestamp':
-				if ( is_string($value))
-				{
-					$value = ctype_digit($value)
-						? (int) $value
-						: strtotime($value);
-				}
-			break;
-			case 'boolean':
-				$value = (bool) $value;
-			break;
-			case 'email':
-				if ( ! $clean)
-				{
-					$value = strtolower(trim((string) $value));
-				}
-
-				if ( $value === '')
-				{
-					$value = NULL;
-				}
-			break;
-			case 'string':
-				$value = trim((string) $value);
-
-				if ( ! $clean)
-				{
-					$max_size = Arr::get($field, 'max_size', Mango::MAX_SIZE_STRING);
-
-					if ( UTF8::strlen($value) > $max_size)
+				break;
+				case 'timestamp':
+					if ( ! is_int($value))
 					{
-						$value = UTF8::substr($value, 0, $max_size);
+						$value = ctype_digit($value)
+							? (int) $value
+							: strtotime($value);
+					}
+				break;
+				case 'boolean':
+					$value = (bool) $value;
+				break;
+				case 'email':
+					if ( ! $clean)
+					{
+						$value = strtolower(trim((string) $value));
+					}
+				break;
+				case 'string':
+					$value = trim((string) $value);
+
+					if ( ! $clean && strlen($value))
+					{
+						$max_size = Arr::get($field, 'max_size', Mango::MAX_SIZE_STRING);
+
+						if ( UTF8::strlen($value) > $max_size)
+						{
+							$value = UTF8::substr($value, 0, $max_size);
+						}
+
+						if ( Arr::get($field, 'xss_clean') && ! empty($value))
+						{
+							$value = Security::xss_clean($value);
+						}
+					}
+				break;
+				case 'has_one':
+					if ( is_array($value))
+					{
+						$value = Mango::factory($field['model'], $value, $clean ? Mango::CLEAN : Mango::CHANGE);
 					}
 
-					if ( Arr::get($field, 'xss_clean') && ! empty($value))
+					if ( ! $value instanceof Mango)
 					{
-						$value = Security::xss_clean($value);
+						$value = NULL;
 					}
-				}
+					else
+					{
+						$value->set_parent($this);
+					}
+				break;
+				case 'has_many':
+					$value = new Mango_Set($value, $field['model'], Arr::get($field, 'duplicates', FALSE), $clean);
 
-				if ( $value === '')
-				{
-					$value = NULL;
-				}
-			break;
-			case 'has_one':
-				if ( is_array($value))
-				{
-					$value = Mango::factory($field['model'], $value, $clean ? Mango::CLEAN : Mango::CHANGE);
-				}
+					foreach ( $value as $model)
+					{
+						$model->set_parent($this);
+					}
+				break;
+				case 'counter':
+					$value = new Mango_Counter($value);
+				break;
+				case 'array':
+					$value = new Mango_Array($value, Arr::get($field, 'type_hint'), $clean);
+				break;
+				case 'set':
+					$value = new Mango_Set($value, Arr::get($field, 'type_hint'), Arr::get($field, 'duplicates', TRUE), $clean);
+				break;
+				case 'mixed':
+					$value = ! is_object($value)
+						? $value
+						: NULL;
+				break;
+			}
 
-				if ( ! $value instanceof Mango)
-				{
-					$value = NULL;
-				}
-				else
-				{
-					$value->set_parent($this);
-				}
-			break;
-			case 'has_many':
-				$value = new Mango_Set($value, $field['model'], Arr::get($field, 'duplicates', FALSE), $clean);
-
-				foreach ( $value as $model)
-				{
-					$model->set_parent($this);
-				}
-			break;
-			case 'counter':
-				$value = new Mango_Counter($value);
-			break;
-			case 'array':
-				$value = new Mango_Array($value, Arr::get($field, 'type_hint'), $clean);
-			break;
-			case 'set':
-				$value = new Mango_Set($value, Arr::get($field, 'type_hint'), Arr::get($field, 'duplicates', TRUE), $clean);
-			break;
-			case 'mixed':
-				$value = ! is_object($value)
-					? $value
-					: NULL;
-			break;
+			if ( ! $clean && is_string($value) && $value === '')
+			{
+				$value = NULL;
+			}
 		}
 
 		return $value;
