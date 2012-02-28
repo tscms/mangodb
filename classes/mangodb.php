@@ -96,9 +96,6 @@ class MangoDB {
 			'hostnames'  => 'localhost:27017'
 		));
 
-		// Clear the connection parameters for security
-		unset($this->_config['connection']);
-
 		if ( isset($username) && isset($password))
 		{
 			// Add Username & Password to server string
@@ -150,10 +147,10 @@ class MangoDB {
 			$this->_connection->close();
 		}
 
-		$this->_db = $this->_connection = NULL;
+		$this->_db = $this->_connection = $this->_connected = NULL;
 	}
 
-	/* Database Management */
+	/** Database Management */
 
 	public function last_error()
 	{
@@ -168,7 +165,7 @@ class MangoDB {
 			? $this->_db->prevError()
 			: NULL;
 	}
-	
+
 	public function reset_error()
 	{
 		return $this->_connected
@@ -189,7 +186,7 @@ class MangoDB {
 		));
 	}
 
-	/* Collection management */
+	/** Collection management */
 
 	public function create_collection ( $name, $capped= FALSE, $size= 0, $max= 0 )
 	{
@@ -217,7 +214,7 @@ class MangoDB {
 		));
 	}
 
-	/* Data Management */
+	/** Data Management */
 
 	public function batch_insert ( $collection_name, array $a, array $options = array() )
 	{
@@ -298,7 +295,7 @@ class MangoDB {
 		), $a);
 	}
 
-	/* File management */
+	/** File management */
 
 	public function gridFS( $arg1 = NULL, $arg2 = NULL)
 	{
@@ -360,7 +357,7 @@ class MangoDB {
 		));
 	}
 
-	/* 
+	/**
 	 * All commands for which benchmarking could be useful
 	 * are executed by this method
 	 *
@@ -459,4 +456,3 @@ class MangoDB {
 		return $r;
 	}
 }
-?>
