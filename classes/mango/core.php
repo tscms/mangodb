@@ -611,7 +611,7 @@ abstract class Mango_Core implements Mango_Interface {
 				switch ( $relation['type'])
 				{
 					case 'belongs_to':
-						$this->_fields[$name . '_id'] = array('type'=>'MongoId', 'required' => TRUE);
+						$this->_fields[$name . '_id'] = array('type'=>'MongoId', 'required' => ! Arr::get($relation, 'sparse', FALSE));
 					break;
 					case 'has_and_belongs_to_many':
 						$this->_fields[$name . '_ids'] = array('type'=>'set', 'duplicates' => FALSE);
