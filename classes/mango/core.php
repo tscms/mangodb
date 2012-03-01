@@ -1032,7 +1032,7 @@ abstract class Mango_Core implements Mango_Interface {
 	 *                                  see: http://www.php.net/manual/en/mongocollection.remove.php
 	 * @return  $this
 	 */
-	public function delete($safe = FALSE)
+	public function delete($safe = TRUE)
 	{
 		if ( $this->_embedded)
 		{
