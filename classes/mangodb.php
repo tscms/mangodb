@@ -186,6 +186,13 @@ class MangoDB {
 		));
 	}
 
+	public function db()
+	{
+		return $this->_connected
+			? $this->_db
+			: FALSE;
+	}
+
 	/** Collection management */
 
 	public function create_collection ( $name, $capped= FALSE, $size= 0, $max= 0 )
