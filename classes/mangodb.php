@@ -74,11 +74,6 @@ class MangoDB {
 		MangoDB::$instances[$name] = $this;
 	}
 
-	final public function __destruct()
-	{
-		$this->disconnect();
-	}
-
 	final public function __toString()
 	{
 		return $this->_name;
