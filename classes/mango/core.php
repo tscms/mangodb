@@ -467,7 +467,7 @@ abstract class Mango_Core implements Mango_Interface {
 				}
 
 				// don't update value if the value did not change
-				$same_clean  = isset($this->_clean[$name]) && $this->_clean[$name] === $value;
+				$same_clean  = isset($this->_clean[$name]) && $this->_clean[$name] === Mango::normalize($value);
 				$same_object = ! $same_clean && isset($this->_object[$name]) && Mango::normalize($this->_object[$name]) === Mango::normalize($value);
 
 				if ( $same_clean || $same_object)
