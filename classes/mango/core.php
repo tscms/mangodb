@@ -712,8 +712,9 @@ abstract class Mango_Core implements Mango_Interface {
 						? $this->_object[$field_name]
 						: $this->__get($field_name);
 
-					if ( ! $clean && isset($field_data['xss_clean']) && is_string($value))
+					if ( ! $clean && Arr::get($field_data, 'xss_clean') && is_string($value))
 					{
+						// undo htmlspecialchars encoding done by HTML purifier
 						$value = htmlspecialchars_decode($value);
 					}
 
