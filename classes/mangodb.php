@@ -121,11 +121,36 @@ class MangoDB {
 			$this->_error = $e;
 		}
 
-		$this->_disconnected = NULL;
+		// check if we have access to a master
+		if ( Arr::path($this->_config, 'connection.options.replicaSet') !== NULL)
+		{
+			$master = FALSE;
+
+			foreach ( $this->_connection->getHosts() as $host)
+			{
+				if ( $host['state'] === 1)
+				{
+					$master = TRUE;
+					break;
+				}
+			}
+
+			if ( $master === FALSE)
+			{
+				$this->_error = new MongoConnectionException("couldn't determine master");
+
+				if ( $throw)
+				{
+					throw $this->_error;
+				}
+			}
+		}
+
 		$this->_connected    = $this->_connection->connected;
 		$this->_db           = $this->_connected
 			? $this->_connection->selectDB(Arr::path($this->_config, 'connection.options.db'))
 			: NULL;
+
 
 		return $this->_connected;
 	}
