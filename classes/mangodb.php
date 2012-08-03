@@ -121,8 +121,9 @@ class MangoDB {
 			$this->_error = $e;
 		}
 
-		$this->_connected  = $this->_connection->connected;
-		$this->_db         = $this->_connected
+		$this->_disconnected = NULL;
+		$this->_connected    = $this->_connection->connected;
+		$this->_db           = $this->_connected
 			? $this->_connection->selectDB(Arr::path($this->_config, 'connection.options.db'))
 			: NULL;
 
@@ -151,22 +152,21 @@ class MangoDB {
 	}
 
 	/**
-	 * Ensure database connection exists
+	 * Try to connect to database
 	 *
-	 * @throws MongoConnectionException   if cannot connect
+	 * @param  boolean   throw exception when connection fails
+	 * @return boolean   connected
+	 * @throws MongoConnectionException
 	 */
-	public function ensure_connection()
+	public function try_to_connect($throw = FALSE)
 	{
 		if ( ! $this->_connected && $this->_error === NULL)
 		{
 			// connect
-			$this->connect(FALSE);
+			$this->connect($throw);
 		}
 
-		if ( $this->_error !== NULL)
-		{
-			throw $this->_error;
-		}
+		return $this->_connected;
 	}
 
 	/** Database Management */
@@ -325,7 +325,7 @@ class MangoDB {
 
 	public function gridFS( $arg1 = NULL, $arg2 = NULL)
 	{
-		$this->ensure_connection();
+		$this->try_to_connect(TRUE);
 
 		if ( ! isset($arg1))
 		{
@@ -391,7 +391,7 @@ class MangoDB {
 	 */
 	protected function _call($command, array $arguments = array(), array $values = NULL)
 	{
-		$this->ensure_connection();
+		$this->try_to_connect(TRUE);
 
 		extract($arguments);
 
