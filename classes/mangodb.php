@@ -102,7 +102,7 @@ class MangoDB {
 	 */
 	public function connect($throw = FALSE)
 	{
-		if ( $this->_connection !== NULL && $this->_connection->connected)
+		if ( $this->_connection->connected)
 		{
 			return;
 		}
@@ -148,7 +148,7 @@ class MangoDB {
 			$this->_connection->close();
 		}
 
-		$this->_db = $this->_connection = $this->_connected = $this->_error = NULL;
+		$this->_db = $this->_connected = $this->_error = NULL;
 	}
 
 	/**
