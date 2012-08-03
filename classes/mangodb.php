@@ -40,10 +40,11 @@ class MangoDB {
 			if ($config === NULL)
 			{
 				// Load the configuration for this database
-				$config = Kohana::$config->load('mangoDB')->$name;
+				$config = Kohana::$config->load('mangoDB.' . $name);
 			}
 
-			new MangoDB($name,$config);
+			// Store the database instance
+			MangoDB::$instances[$name] = new MangoDB($name,$config);
 		}
 
 		return self::$instances[$name];
@@ -53,25 +54,42 @@ class MangoDB {
 	protected $_name;
 
 	// Connected
-	protected $_connected = FALSE;
+	protected $_connected;
 
-	// Raw server connection
+	// Connection error
+	protected $_error;
+
+	// Mongo object
 	protected $_connection;
 
-	// Raw database connection;
+	// MongoDB object
 	protected $_db;
 
-	// Store config locally
+	// Configuration
 	protected $_config;
 
 	protected function __construct($name, array $config)
 	{
-		$this->_name = $name;
-
+		$this->_name   = $name;
 		$this->_config = $config;
 
-		// Store the database instance
-		MangoDB::$instances[$name] = $this;
+		$server  = $this->_config['connection']['hostnames'];
+		$options = Arr::get($this->_config['connection'], 'options', array());
+
+		if ( strpos($server, 'mongodb://') !== 0)
+		{
+			// Add 'mongodb://'
+			$server = 'mongodb://' . $server;
+		}
+
+		// create Mongo object (but don't connect just yet)
+		$this->_connection = new Mongo($server, array('connect' => FALSE) + $options);
+
+		// connect
+		if ( Arr::get($options, 'connect', TRUE))
+		{
+			$this->connect(TRUE);
+		}
 	}
 
 	final public function __toString()
@@ -79,40 +97,15 @@ class MangoDB {
 		return $this->_name;
 	}
 
-	public function connect()
+	/**
+	 * Connect to database
+	 */
+	public function connect($throw = FALSE)
 	{
-		if ( $this->_connection)
+		if ( $this->_connection->connected)
 		{
 			return;
 		}
-
-		// Extract the connection parameters, adding required variables
-		extract($this->_config['connection'] + array(
-			'hostnames'  => 'localhost:27017'
-		));
-
-		if ( isset($username) && isset($password))
-		{
-			// Add Username & Password to server string
-			$hostnames = $username . ':' . $password . '@' . $hostnames . '/' . $database;
-		}
-
-		if ( strpos($hostnames, 'mongodb://') !== 0)
-		{
-			// Add required 'mongodb://' prefix
-			$hostnames = 'mongodb://' . $hostnames;
-		}
-
-		if ( ! isset($options))
-		{
-			$options = array();
-		}
-
-		// We connect below in a separate try catch
-		$options['connect'] = FALSE;
-
-		// Create connection object
-		$this->_connection = new Mongo($hostnames, $options);
 
 		try
 		{
@@ -120,29 +113,60 @@ class MangoDB {
 		}
 		catch ( MongoConnectionException $e)
 		{
-			// Unable to connect to the database server
-			throw new Kohana_Exception('Unable to connect to MongoDB server at :hostnames',
-				array(':hostnames' => $e->getMessage()));
+			if ( $throw)
+			{
+				throw $e;
+			}
+
+			$this->_error = $e;
 		}
 
-		if ( ! isset($database))
-		{
-			throw new Kohana_Exception('No database specified in MangoDB Config');
-		}
+		$this->_connected  = $this->_connection->connected;
+		$this->_db         = $this->_connected
+			? $this->_connection->selectDB(Arr::path($this->_config, 'connection.options.db'))
+			: NULL;
 
-		$this->_db = $this->_connection->selectDB($database);
-
-		return $this->_connected = TRUE;
+		return $this->_connected;
 	}
 
+	/**
+	 * Returns connection status
+	 */
+	public function connected()
+	{
+		return $this->_connected;
+	}
+
+	/**
+	 * Disconnect from database
+	 */
 	public function disconnect()
 	{
-		if ( $this->_connection)
+		if ( $this->_connected)
 		{
 			$this->_connection->close();
 		}
 
-		$this->_db = $this->_connection = $this->_connected = NULL;
+		$this->_db = $this->_connection = $this->_connected = $this->_error = NULL;
+	}
+
+	/**
+	 * Ensure database connection exists
+	 *
+	 * @throws MongoConnectionException   if cannot connect
+	 */
+	public function ensure_connection()
+	{
+		if ( ! $this->_connected && $this->_error === NULL)
+		{
+			// connect
+			$this->connect(FALSE);
+		}
+
+		if ( $this->_error !== NULL)
+		{
+			throw $this->_error;
+		}
 	}
 
 	/** Database Management */
@@ -301,7 +325,7 @@ class MangoDB {
 
 	public function gridFS( $arg1 = NULL, $arg2 = NULL)
 	{
-		$this->_connected OR $this->connect();
+		$this->ensure_connection();
 
 		if ( ! isset($arg1))
 		{
@@ -367,7 +391,7 @@ class MangoDB {
 	 */
 	protected function _call($command, array $arguments = array(), array $values = NULL)
 	{
-		$this->_connected OR $this->connect();
+		$this->ensure_connection();
 
 		extract($arguments);
 
