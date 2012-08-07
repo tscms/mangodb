@@ -56,9 +56,6 @@ class MangoDB {
 	// Connected
 	protected $_connected;
 
-	// Connection error
-	protected $_error;
-
 	// Mongo object
 	protected $_connection;
 
@@ -88,7 +85,7 @@ class MangoDB {
 		// connect
 		if ( Arr::get($options, 'connect', TRUE))
 		{
-			$this->connect(TRUE);
+			$this->connect();
 		}
 	}
 
@@ -100,57 +97,19 @@ class MangoDB {
 	/**
 	 * Connect to database
 	 */
-	public function connect($throw = FALSE)
+	public function connect()
 	{
-		if ( $this->_connection->connected)
+		if ( $this->_connected)
 		{
-			return;
+			return TRUE;
 		}
 
-		try
-		{
-			$this->_connection->connect();
-		}
-		catch ( MongoConnectionException $e)
-		{
-			if ( $throw)
-			{
-				throw $e;
-			}
-
-			$this->_error = $e;
-		}
-
-		// check if we have access to a master
-		if ( Arr::path($this->_config, 'connection.options.replicaSet') !== NULL)
-		{
-			$master = FALSE;
-
-			foreach ( $this->_connection->getHosts() as $host)
-			{
-				if ( $host['state'] === 1)
-				{
-					$master = TRUE;
-					break;
-				}
-			}
-
-			if ( $master === FALSE)
-			{
-				$this->_error = new MongoConnectionException("couldn't determine master");
-
-				if ( $throw)
-				{
-					throw $this->_error;
-				}
-			}
-		}
+		$this->_connection->connect();
 
 		$this->_connected    = $this->_connection->connected;
 		$this->_db           = $this->_connected
 			? $this->_connection->selectDB(Arr::path($this->_config, 'connection.options.db'))
 			: NULL;
-
 
 		return $this->_connected;
 	}
@@ -173,25 +132,7 @@ class MangoDB {
 			$this->_connection->close();
 		}
 
-		$this->_db = $this->_connected = $this->_error = NULL;
-	}
-
-	/**
-	 * Try to connect to database
-	 *
-	 * @param  boolean   throw exception when connection fails
-	 * @return boolean   connected
-	 * @throws MongoConnectionException
-	 */
-	public function try_to_connect($throw = FALSE)
-	{
-		if ( ! $this->_connected && $this->_error === NULL)
-		{
-			// connect
-			$this->connect($throw);
-		}
-
-		return $this->_connected;
+		$this->_db = $this->_connected = NULL;
 	}
 
 	/** Database Management */
@@ -350,7 +291,7 @@ class MangoDB {
 
 	public function gridFS( $arg1 = NULL, $arg2 = NULL)
 	{
-		$this->try_to_connect(TRUE);
+		$this->_connected OR $this->connect();
 
 		if ( ! isset($arg1))
 		{
@@ -416,7 +357,7 @@ class MangoDB {
 	 */
 	protected function _call($command, array $arguments = array(), array $values = NULL)
 	{
-		$this->try_to_connect(TRUE);
+		$this->_connected OR $this->connect();
 
 		extract($arguments);
 
