@@ -289,23 +289,13 @@ class MangoDB {
 
 	/** File management */
 
-	public function gridFS( $arg1 = NULL, $arg2 = NULL)
+	public function gridFS()
 	{
 		$this->_connected OR $this->connect();
 
-		if ( ! isset($arg1))
-		{
-			$arg1 = isset($this->_config['gridFS']['arg1'])
-				? $this->_config['gridFS']['arg1']
-				: 'fs';
-		}
+		$prefix = Arr::path($this->_config, 'gridFS.prefix', 'fs');
 
-		if ( ! isset($arg2) && isset($this->_config['gridFS']['arg2']))
-		{
-			$arg2 = $this->_config['gridFS']['arg2'];
-		}
-
-		return $this->_db->getGridFS($arg1,$arg2);
+		return $this->_db->getGridFS($prefix);
 	}
 
 	public function get_file(array $criteria = array())
