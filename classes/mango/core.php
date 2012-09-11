@@ -1147,9 +1147,10 @@ abstract class Mango_Core implements Mango_Interface {
 
 		foreach ( $this->_fields as $field_name => $field_data)
 		{
-			if ( ! in_array($field_data['type'], array('has_one','has_many')))
+			if ( ! in_array($field_data['type'], array('has_one','has_many')) || $this->__isset($field_name))
 			{
-				// by not checking if the field has been set, we also include default values (if any)
+				// Don't check if regular fields are set, to include default values
+				// Do check if embedded objects are set, they don't have default values and we cannot instantiate extended models
 				$local[$field_name] = Mango::normalize($this->__get($field_name));
 			}
 		}
