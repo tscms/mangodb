@@ -1,3 +1,3 @@
 <?php
 
-abstract class Mango extends Mango_Core {}
+abstract class Mango extends Kohana_Mango {}
