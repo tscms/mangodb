@@ -663,7 +663,7 @@ abstract class Kohana_Mango implements Mango_Interface {
 		if ( $clean)
 		{
 			// lazy loading - clean values are loaded when accessed
-			$this->_clean = array_intersect_key($values, $this->_fields);
+			$this->_clean = array_intersect_key($values, $this->_fields) + $this->_clean;
 		}
 		else
 		{
