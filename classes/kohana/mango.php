@@ -694,9 +694,9 @@ abstract class Kohana_Mango implements Mango_Interface {
 		{
 			if ( $this->__isset($field_name))
 			{
-				if ( $clean && Arr::get($field_data,'local') === TRUE)
+				if ( Arr::get($field_data,'local') === TRUE)
 				{
-					// local fields are not stored in database
+					// local fields are not included in as_array array (not stored in db, not included in JSON objects)
 					continue;
 				}
 
