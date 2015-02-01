@@ -89,7 +89,7 @@ class Kohana_MangoDB {
 		}
 
 		// create Mongo object (but don't connect just yet)
-		$this->_connection = new Mongo($server, array('connect' => FALSE) + $options);
+		$this->_connection = new MongoClient($server, array('connect' => FALSE) + $options);
 
 		// connect
 		if ( Arr::get($options, 'connect', TRUE))
@@ -113,10 +113,8 @@ class Kohana_MangoDB {
 			return TRUE;
 		}
 
-		$this->_connection->connect();
-
-		$this->_connected    = $this->_connection->connected;
-		$this->_db           = $this->_connected
+		$this->_connected = $this->_connection->connect();
+		$this->_db        = $this->_connected
 			? $this->_connection->selectDB(Arr::path($this->_config, 'connection.options.db'))
 			: NULL;
 
@@ -376,6 +374,11 @@ class Kohana_MangoDB {
 		if ( isset($collection_name))
 		{
 			$c = $this->_db->selectCollection($collection_name);
+		}
+
+		if ( isset($options) && ! array_key_exists('w', $options))
+		{
+			$options['w'] = ARR::get($this->_config, 'writeConcern', 1);
 		}
 
 		switch ( $command)

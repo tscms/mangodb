@@ -954,12 +954,11 @@ abstract class Kohana_Mango implements Mango_Interface {
 	/**
 	 * Create a new document using the current data.
 	 *
-	 * @param   array|boolean|integer   options array or value for 'safe' (true/false/replication integer)
-	 *                                  see: http://www.php.net/manual/en/mongocollection.insert.php
+	 * @param   array   options array
 	 * @return  $this
 	 * @throws  Mango_Exception   Creating failed
 	 */
-	public function create($safe = TRUE)
+	public function create($options = array())
 	{
 		if ( $this->_embedded)
 		{
@@ -975,9 +974,11 @@ abstract class Kohana_Mango implements Mango_Interface {
 
 		if ( $values = $this->changed(FALSE))
 		{
-			$options = is_array($safe)
-				? $safe
-				: array('safe' => $safe);
+			if ( $options === TRUE)
+			{
+				// backwards compatability
+				$options = array();
+			}
 
 			try
 			{
@@ -1000,12 +1001,11 @@ abstract class Kohana_Mango implements Mango_Interface {
 	 * Update the current document using the current data.
 	 *
 	 * @param   array  Additional criteria for update
-	 * @param   array|boolean|integer   options array or value for 'safe' (true/false/replication integer)
-	 *                                  see: http://www.php.net/manual/en/mongocollection.insert.php
+	 * @param   array  options array
 	 * @return  $this
-	 * @throws  Mango_Exception   Updating failed
+	 * @throws  Mango_Exception  Updating failed
 	 */
-	public function update( $criteria = array(), $safe = TRUE)
+	public function update( $criteria = array(), $options = array())
 	{
 		if ( $this->_embedded)
 		{
@@ -1017,7 +1017,11 @@ abstract class Kohana_Mango implements Mango_Interface {
 		{
 			$criteria['_id'] = $this->_id;
 
-			$options = is_array($safe) ? $safe : array('safe' => $safe);
+			if ( $options === TRUE)
+			{
+				// backwards compatability
+				$options = array();
+			}
 
 			try
 			{
@@ -1038,26 +1042,27 @@ abstract class Kohana_Mango implements Mango_Interface {
 	/**
 	 * Delete the current document using the current data.
 	 *
-	 * @param   array|boolean|integer   options array or value for 'safe' (true/false/replication integer)
-	 *                                  see: http://www.php.net/manual/en/mongocollection.remove.php
+	 * @param   array   options array
 	 * @return  $this
 	 */
-	public function delete($safe = TRUE)
+	public function delete($options = array())
 	{
-		if ( $this->_embedded)
-		{
+		if ($this->_embedded) {
 			throw new Mango_Exception(':name model is embedded and cannot be deleted (delete parent instead)',
 				array(':name' => $this->_model));
-		}
-		elseif ( ! $this->loaded())
-		{
+		} elseif (!$this->loaded()) {
 			$this->load(1);
 
-			if ( ! $this->loaded())
-			{
+			if (!$this->loaded()) {
 				// model does not exist
 				return $this;
 			}
+		}
+
+		if ($options === TRUE)
+		{
+			// backwards compatability
+			$options = array();
 		}
 
 		// Update/remove relations
@@ -1066,12 +1071,12 @@ abstract class Kohana_Mango implements Mango_Interface {
 			switch ( $relation['type'])
 			{
 				case 'has_one':
-					$this->__get($name)->delete($safe);
+					$this->__get($name)->delete($options);
 				break;
 				case 'has_many':
 					foreach ( $this->__get($name) as $hm)
 					{
-						$hm->delete($safe);
+						$hm->delete($options);
 					}
 				break;
 				case 'has_and_belongs_to_many':
@@ -1079,13 +1084,11 @@ abstract class Kohana_Mango implements Mango_Interface {
 
 					if ( ! empty($set))
 					{
-						$this->db()->update( $name, array('_id' => array('$in' => $set)), array('$pull' => array($relation['related_relation'] . '_ids' => $this->_id)), array('multiple' => TRUE));
+						$this->db()->update( $name, array('_id' => array('$in' => $set)), array('$pull' => array($relation['related_relation'] . '_ids' => $this->_id)), $options + array('multiple' => TRUE));
 					}
 				break;
 			}
 		}
-
-		$options = is_array($safe) ? $safe : array('safe' => $safe);
 
 		try
 		{
