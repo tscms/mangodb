@@ -28,8 +28,8 @@ return array(
 				// database to connect to
 				'db'         => 'example',
 
-				// default timeout of 20 seconds is too long
-				'timeout'    => 2000,
+				// default timeout of 60 seconds is too long
+				'connectTimeoutMS'    => 2000,
 
 				// Connect to DB on creation - how do you want to deal with connection errors
 				// TRUE : MangoDB::instance fails and an exception is thrown. Next call to MangoDB::instance will try to connect again
@@ -44,6 +44,9 @@ return array(
 				//'replicaSet' => 'someSet',
 			)
 		),
+
+		// see http://php.net/manual/en/mongo.writeconcerns.php
+		'writeConcern' => 1,
 
 		/**
 		 * Whether or not to use profiling
