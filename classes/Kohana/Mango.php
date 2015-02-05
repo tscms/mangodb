@@ -48,7 +48,7 @@ abstract class Kohana_Mango implements Mango_Interface {
 
 		if ( ! isset($models[$name]))
 		{
-			$class = 'Model_'.$name;
+			$class = 'Model_'.str_replace(' ', '_', ucwords(str_replace('_', ' ', $name)));
 
 			$models[$name] = new $class;
 		}
