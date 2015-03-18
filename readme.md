@@ -1,4 +1,4 @@
-# MongoDB for Kohana 3.2
+# MongoDB for Kohana 3.3
 
 ## Mango
 
