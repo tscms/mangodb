@@ -34,4 +34,29 @@ class Kohana_Mango_Valid extends Kohana_Valid {
 	{
 		return $number <= $max;
 	}
+
+    /**
+     * Tests if a value is a valid MongoId
+     *
+     * @return  boolean
+     */
+    public static function is_mongoid($value)
+    {
+        if ( empty($value)) {
+            return FALSE;
+        }
+
+        if ($value instanceof MongoId) {
+            return TRUE;
+        }
+
+        try {
+            new MongoId($value);
+            return TRUE;
+        } catch ( MongoException $e) {
+            // nothing
+        }
+
+        return FALSE;
+    }
 }

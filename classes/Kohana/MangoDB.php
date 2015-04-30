@@ -378,7 +378,7 @@ class Kohana_MangoDB {
 
 		if ( isset($options) && ! array_key_exists('w', $options))
 		{
-			$options['w'] = ARR::get($this->_config, 'writeConcern', 1);
+			$options['w'] = Arr::get($this->_config, 'writeConcern', 1);
 		}
 
 		switch ( $command)

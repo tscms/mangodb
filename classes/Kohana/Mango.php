@@ -418,7 +418,7 @@ abstract class Kohana_Mango implements Mango_Interface {
 						$limit    = 1;
 					break;
 					case 'has_many':
-						$criteria = array( ARR::get($relation, 'relation_name', $this->_model) . '_id' => $this->_id);
+						$criteria = array( Arr::get($relation, 'relation_name', $this->_model) . '_id' => $this->_id);
 						$limit    = FALSE;
 					break;
 					case 'has_and_belongs_to_many':
