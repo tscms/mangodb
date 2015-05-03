@@ -50,11 +50,13 @@ class Kohana_Mango_Valid extends Kohana_Valid {
             return TRUE;
         }
 
-        try {
-            new MongoId($value);
-            return TRUE;
-        } catch ( MongoException $e) {
-            // nothing
+        if ( is_string($value)) {
+            try {
+                new MongoId($value);
+                return TRUE;
+            } catch (MongoException $e) {
+                // nothing
+            }
         }
 
         return FALSE;
